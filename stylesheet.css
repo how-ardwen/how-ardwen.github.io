@@ -27,21 +27,31 @@ a.links:hover, a.links:active {
 }
 
 /* images */
-#container{
-    text-align: justify;
+/* #container{
+    display: flex;
 }
-#container > div img{
+#container img{
+    justify-content: center;
     width: 20%;
-    display: inline-block;
-    vertical-align: top;
 }
 #container:after{
     content: "";
     width: 100%;
     display: inline-block;
+} */
+#container{
+    justify-content: space-between;
+    display: flex;
+    /* background-image: url("file:///C:/Users/wenho/Desktop/Folder/Code/how-ardwen.github.io/images/frieren.jpg"); */
+}
+#container > img{
+    width: 22%;
+    margin: .5%;
+    border-style: solid;
 }
 
 .sample1{
     width: 100%;
     margin-top: .5%;
+    opacity: .1;
 }
