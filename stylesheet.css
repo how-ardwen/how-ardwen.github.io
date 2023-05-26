@@ -55,3 +55,16 @@ a.links:hover, a.links:active {
     margin-top: .5%;
     opacity: .1;
 }
+
+#test{
+    border-style: none;
+    color: black;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: large;
+    background-color: white;
+    /* transition-duration: .4s; */
+}
+
+#test:hover{
+    font-weight: bolder;
+}
