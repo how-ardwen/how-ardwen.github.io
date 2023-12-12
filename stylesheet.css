@@ -5,6 +5,10 @@ p{
     color:black;
 }
 
+a.link:hover {
+    cursor: pointer;
+}
+
 /* home */
 a.none:link, a.none:visited, a.none:hover, a.none:active {
     color: black;
