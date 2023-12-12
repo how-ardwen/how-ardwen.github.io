@@ -3,6 +3,10 @@ function homeRedir(){
     location.href = "index.html";
 };
 
+function lastFM(){
+    location.href = "https://www.last.fm/user/howurdwen";
+};
+
 // client info stuff
 const auth = clientID + ":" + clientSecret;
 

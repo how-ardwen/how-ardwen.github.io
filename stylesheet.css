@@ -5,6 +5,14 @@ p{
     color:black;
 }
 
+a {
+    margin: .5%;
+}
+
+p.link{
+    margin-top: 1.5%;
+}
+
 a.link:hover {
     cursor: pointer;
 }
@@ -71,4 +79,12 @@ a.links:hover, a.links:active {
 
 #test:hover{
     font-weight: bolder;
+}
+
+body{
+    margin-top: 1.5%;
+    p {
+        margin: .5%;
+        text-align: left; 
+    }
 }
