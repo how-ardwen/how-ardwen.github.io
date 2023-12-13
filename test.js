@@ -4,7 +4,11 @@ function homeRedir(){
 };
 
 function lastFM(){
-    location.href = "https://www.last.fm/user/howurdwen";
+    window.open("https://www.last.fm/user/howurdwen", '_blank');
+};
+
+function linkedIn(){
+    window.open("https://www.linkedin.com/in/howard-wen04/", '_blank');
 };
 
 // client info stuff
