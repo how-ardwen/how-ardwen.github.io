@@ -59,7 +59,7 @@ a.links:hover, a.links:active {
 #container > img{
     width: 22%;
     margin: 2.5%;
-    border-style: solid;
+    /* border-style: solid; */
 }
 
 .sample1{

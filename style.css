@@ -1,0 +1,46 @@
+body {
+    padding: .5%
+}
+
+/* <a> tag styling */
+a:link, a:visited {
+    color: black;
+    text-decoration: none;
+}
+
+a:hover {
+    font-weight: bold;
+}
+
+/* home link styling */
+.home {
+    display: inline-block;
+    margin-bottom: .5%;
+}
+
+/* <p> tag styling */
+p {
+    margin: 0 0 10px 0;
+}
+
+/* inline links */
+a.inline-link{
+    color: black;
+    text-decoration: underline;
+}
+
+a.inline-link:hover, a.inline-link:visited {
+    font-weight: normal;
+}
+
+/* GALLERY */
+#container{
+    justify-content: space-between;
+    display: flex;
+    /* background-image: url("file:///C:/Users/wenho/Desktop/Folder/Code/how-ardwen.github.io/images/frieren.jpg"); */
+}
+#container > img{
+    width: 22%;
+    margin: 2.5%;
+    /* border-style: solid; */
+}
