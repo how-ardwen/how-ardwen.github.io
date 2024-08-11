@@ -37,10 +37,11 @@ a.inline-link:hover, a.inline-link:visited {
 #container{
     justify-content: space-between;
     display: flex;
+    width: 100%;
     /* background-image: url("file:///C:/Users/wenho/Desktop/Folder/Code/how-ardwen.github.io/images/frieren.jpg"); */
 }
 #container > img{
-    width: 22%;
+    width: auto;
     margin: 2.5%;
     /* border-style: solid; */
 }
