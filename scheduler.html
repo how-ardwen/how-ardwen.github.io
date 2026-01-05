@@ -1,80 +1,188 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Western Schedule Generator</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; background: #f4f4f9; }
-        .class-row { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .full-width { grid-column: span 4; }
-        button { padding: 10px 20px; cursor: pointer; border-radius: 5px; border: none; font-weight: bold; }
+        :root { --purple: #4f2683; --gray: #f4f4f9; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 1000px; margin: auto; background: var(--gray); color: #333; }
+        h2 { color: var(--purple); border-bottom: 2px solid var(--purple); padding-bottom: 10px; }
+        
+        .config-section { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; }
+        
+        .class-row { background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; position: relative; border-left: 5px solid var(--purple); }
+        
+        .row-controls { grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-top: -10px; }
+        .delete-btn { background: #ff4d4d; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        
+        label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; color: #666; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        
+        .actions { display: flex; gap: 10px; margin-top: 20px; }
+        button { padding: 12px 24px; cursor: pointer; border-radius: 6px; border: none; font-weight: bold; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
         .add-btn { background: #4CAF50; color: white; }
-        .gen-btn { background: #007bff; color: white; float: right; }
+        .clear-btn { background: #666; color: white; }
+        .gen-btn { background: var(--purple); color: white; margin-left: auto; }
     </style>
 </head>
 <body>
-    <h2>Western University Class Schedule Generator</h2>
+
+    <h2>Western Class Schedule to Outlook</h2>
+
+    <div class="config-section">
+        <div>
+            <label>Semester End Date</label>
+            <input type="date" id="semesterEndDate" value="2026-04-09">
+        </div>
+        <p style="font-size: 12px; color: #666;">Classes will repeat weekly until this date.</p>
+    </div>
+
     <div id="container"></div>
-    <br>
-    <button class="add-btn" onclick="addRow()">+ Add Class</button>
-    <button class="gen-btn" onclick="generateICS()">Generate .ics File</button>
+
+    <div class="actions">
+        <button class="add-btn" onclick="addRow()">+ Add Class</button>
+        <button class="clear-btn" onclick="clearAll()">Clear All</button>
+        <button class="gen-btn" onclick="generateICS()">Download .ics File</button>
+    </div>
 
     <script>
-        const LAST_DAY = "20260409T235959Z"; // April 9th, 2026
         const DAY_MAP = { "Monday":"MO", "Tuesday":"TU", "Wednesday":"WE", "Thursday":"TH", "Friday":"FR" };
+        
+        // Find the first occurrence of each weekday in Jan 2026
+        const START_DATES = { "Monday":"05", "Tuesday":"06", "Wednesday":"07", "Thursday":"08", "Friday":"09" };
 
-        function addRow() {
+        function saveToLocal() {
+            const rows = [];
+            document.querySelectorAll('.class-row').forEach(row => {
+                const data = {};
+                row.querySelectorAll('input, select').forEach(el => {
+                    data[el.className] = el.value;
+                });
+                rows.push(data);
+            });
+            localStorage.setItem('western_schedule', JSON.stringify(rows));
+            localStorage.setItem('western_end_date', document.getElementById('semesterEndDate').value);
+        }
+
+        function loadFromLocal() {
+            const savedRows = JSON.parse(localStorage.getItem('western_schedule'));
+            const savedDate = localStorage.getItem('western_end_date');
+            
+            if (savedDate) document.getElementById('semesterEndDate').value = savedDate;
+            
+            if (savedRows && savedRows.length > 0) {
+                savedRows.forEach(data => addRow(data));
+            } else {
+                addRow();
+            }
+        }
+
+        function addRow(data = {}) {
+            const container = document.getElementById('container');
             const div = document.createElement('div');
             div.className = 'class-row';
+            
             div.innerHTML = `
-                <select class="faculty"><option>ECE</option><option>MSE</option><option>AISE</option><option>BUSINESS</option></select>
-                <input type="text" class="code" placeholder="Class Code (e.g. 1330)">
-                <select class="type"><option>Lecture</option><option>Lab</option><option>Tutorial</option></select>
-                <input type="text" class="section" placeholder="Section #">
-                <input type="text" class="bld" placeholder="Building (e.g. SEB)">
-                <input type="text" class="room" placeholder="Room #">
-                <select class="day"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select>
-                <input type="text" class="start" placeholder="Start (e.g. 10:30 AM)">
-                <input type="number" class="duration" placeholder="Duration (hrs)" step="0.5">
+                <div class="row-controls"><button class="delete-btn" onclick="removeRow(this)">Delete</button></div>
+                <div><label>Faculty</label><select class="faculty"><option>ECE</option><option>MSE</option><option>AISE</option><option>BUSINESS</option><option>MBE</option></select></div>
+                <div><label>Class Code</label><input type="text" class="code" placeholder="3300"></div>
+                <div><label>Type</label><select class="type"><option>Lecture</option><option>Lab</option><option>Tutorial</option></select></div>
+                <div><label>Section</label><input type="text" class="section" placeholder="001"></div>
+                <div><label>Building</label><input type="text" class="bld" placeholder="SEB"></div>
+                <div><label>Room</label><input type="text" class="room" placeholder="2202"></div>
+                <div><label>Day</label><select class="day"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select></div>
+                <div><label>Start Time</label><input type="time" class="start" value="08:30"></div>
+                <div><label>Duration (Hours)</label><input type="number" class="duration" value="1" step="0.5" min="0.5"></div>
             `;
-            document.getElementById('container').appendChild(div);
+
+            container.appendChild(div);
+
+            // Fill data if loading from local
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    const el = div.querySelector(`.${key}`);
+                    if (el) el.value = data[key];
+                });
+            }
+
+            // Attach listeners for autosave
+            div.querySelectorAll('input, select').forEach(el => el.addEventListener('change', saveToLocal));
+        }
+
+        function removeRow(btn) {
+            const rows = document.querySelectorAll('.class-row');
+            if (rows.length > 1) {
+                btn.closest('.class-row').remove();
+                saveToLocal();
+            } else {
+                alert("You must have at least one class.");
+            }
+        }
+
+        function clearAll() {
+            if (confirm("Clear all rows and reset inputs?")) {
+                document.getElementById('container').innerHTML = '';
+                localStorage.removeItem('western_schedule');
+                addRow();
+            }
         }
 
         function generateICS() {
-            let ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Western//Mechatronics//EN"].join("\n");
-            const rows = document.querySelectorAll('.class-row');
+            const endDateRaw = document.getElementById('semesterEndDate').value.replace(/-/g, '');
+            const UNTIL = `${endDateRaw}T235959Z`;
             
-            rows.forEach(row => {
-                const fac = row.querySelector('.faculty').value;
-                const code = row.querySelector('.code').value;
-                const type = row.querySelector('.type').value;
-                const startStr = row.querySelector('.start').value;
-                const duration = parseFloat(row.querySelector('.duration').value);
+            let ics = [
+                "BEGIN:VCALENDAR",
+                "VERSION:2.0",
+                "PRODID:-//Western//Mechatronics//EN",
+                "X-WR-TIMEZONE:America/Toronto"
+            ].join("\n");
+
+            document.querySelectorAll('.class-row').forEach(row => {
+                const f = row.querySelector('.faculty').value;
+                const c = row.querySelector('.code').value;
+                const t = row.querySelector('.type').value;
+                const s = row.querySelector('.section').value;
+                const b = row.querySelector('.bld').value;
+                const r = row.querySelector('.room').value;
                 const day = row.querySelector('.day').value;
+                const startTime = row.querySelector('.start').value.replace(':', '');
+                const dur = parseFloat(row.querySelector('.duration').value);
 
-                // Simple date logic for Jan 2026 start
-                const baseDays = { "Monday":5, "Tuesday":6, "Wednesday":7, "Thursday":8, "Friday":9 };
-                const dayNum = baseDays[day];
+                // Calculate End Time
+                const startHour = parseInt(row.querySelector('.start').value.split(':')[0]);
+                const startMin = parseInt(row.querySelector('.start').value.split(':')[1]);
                 
-                // Parse Time (e.g., "10:30 AM")
-                const [time, modifier] = startStr.split(' ');
-                let [hours, minutes] = time.split(':');
-                if (modifier === 'PM' && hours !== '12') hours = parseInt(hours) + 12;
-                if (modifier === 'AM' && hours === '12') hours = '00';
-                const formattedTime = `${hours.toString().padStart(2, '0')}${minutes}00`;
+                let endHour = startHour + Math.floor(dur);
+                let endMin = startMin + (dur % 1 * 60);
+                if (endMin >= 60) { endHour++; endMin -= 60; }
+                const endTime = `${endHour.toString().padStart(2, '0')}${endMin.toString().padStart(2, '0')}`;
 
-                ics += `\nBEGIN:VEVENT\nSUMMARY:${fac} ${code} ${type}\nLOCATION:${row.querySelector('.bld').value} ${row.querySelector('.room').value}\nDESCRIPTION:Section ${row.querySelector('.section').value}\nDTSTART;TZID=America/Toronto:2026010${dayNum}T${formattedTime}\nRRULE:FREQ=WEEKLY;BYDAY=${DAY_MAP[day]};UNTIL=${LAST_DAY}\nEND:VEVENT`;
+                ics += `
+                    BEGIN:VEVENT
+                    SUMMARY:${f} ${c} ${t}
+                    LOCATION:${b} ${r}
+                    DESCRIPTION:Section ${s}
+                    DTSTART;TZID=America/Toronto:202601${START_DATES[day]}T${startTime}00
+                    DTEND;TZID=America/Toronto:202601${START_DATES[day]}T${endTime}00
+                    RRULE:FREQ=WEEKLY;BYDAY=${DAY_MAP[day]};UNTIL=${UNTIL}
+                    END:VEVENT`;
             });
 
             ics += "\nEND:VCALENDAR";
+            
             const blob = new Blob([ics], { type: 'text/calendar' });
-            const link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            link.download = "Western_Schedule.ics";
-            link.click();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Western_Schedule_${new Date().toISOString().slice(0,10)}.ics`;
+            a.click();
         }
 
-        addRow(); // Start with one row
+        document.getElementById('semesterEndDate').addEventListener('change', saveToLocal);
+        window.onload = loadFromLocal;
     </script>
 </body>
 </html>
