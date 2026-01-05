@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Western Schedule Generator</title>
+    <title>Schedule to Outlook</title>
     <style>
         :root { --purple: #4f2683; --gray: #f4f4f9; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; max-width: 1000px; margin: auto; background: var(--gray); color: #333; }
@@ -29,14 +29,17 @@
 </head>
 <body>
 
-    <h2>Western Class Schedule to Outlook</h2>
+    <h2>Applet for Schedule to Outlook</h2>
 
     <div class="config-section">
+        <div>
+            <label>Semester Start Date</label>
+            <input type="date" id="semesterStartDate" value="2026-01-05">
+        </div>
         <div>
             <label>Semester End Date</label>
             <input type="date" id="semesterEndDate" value="2026-04-09">
         </div>
-        <p style="font-size: 12px; color: #666;">Classes will repeat weekly until this date.</p>
     </div>
 
     <div id="container"></div>
@@ -63,14 +66,17 @@
                 rows.push(data);
             });
             localStorage.setItem('western_schedule', JSON.stringify(rows));
+            localStorage.setItem('western_start_date', document.getElementById('semesterStartDate').value);
             localStorage.setItem('western_end_date', document.getElementById('semesterEndDate').value);
         }
 
         function loadFromLocal() {
             const savedRows = JSON.parse(localStorage.getItem('western_schedule'));
-            const savedDate = localStorage.getItem('western_end_date');
+            const savedStartDate = localStorage.getItem('western_start_date');
+            const savedEndDate = localStorage.getItem('western_end_date');
             
-            if (savedDate) document.getElementById('semesterEndDate').value = savedDate;
+            if (savedStartDate) document.getElementById('semesterStartDate').value = savedStartDate;
+            if (savedEndDate) document.getElementById('semesterEndDate').value = savedEndDate;
             
             if (savedRows && savedRows.length > 0) {
                 savedRows.forEach(data => addRow(data));
@@ -86,7 +92,7 @@
             
             div.innerHTML = `
                 <div class="row-controls"><button class="delete-btn" onclick="removeRow(this)">Delete</button></div>
-                <div><label>Faculty</label><select class="faculty"><option>ECE</option><option>MSE</option><option>AISE</option><option>BUSINESS</option><option>MBE</option></select></div>
+                <div><label>Faculty</label><select class="faculty"><option>ECE</option><option>MSE</option><option>AISE</option><option>BUSINESS</option><option>BME</option></select></div>
                 <div><label>Class Code</label><input type="text" class="code" placeholder="3300"></div>
                 <div><label>Type</label><select class="type"><option>Lecture</option><option>Lab</option><option>Tutorial</option></select></div>
                 <div><label>Section</label><input type="text" class="section" placeholder="001"></div>
@@ -132,15 +138,19 @@
         function generateICS() {
             const endDateRaw = document.getElementById('semesterEndDate').value.replace(/-/g, '');
             const UNTIL = `${endDateRaw}T235959Z`;
+            const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + "Z";
             
+            // Start with header - NO INDENTATION
             let ics = [
                 "BEGIN:VCALENDAR",
                 "VERSION:2.0",
                 "PRODID:-//Western//Mechatronics//EN",
+                "CALSCALE:GREGORIAN",
+                "METHOD:PUBLISH",
                 "X-WR-TIMEZONE:America/Toronto"
-            ].join("\n");
+            ].join("\r\n"); // Use \r\n for CRLF line endings
 
-            document.querySelectorAll('.class-row').forEach(row => {
+            document.querySelectorAll('.class-row').forEach((row, index) => {
                 const f = row.querySelector('.faculty').value;
                 const c = row.querySelector('.code').value;
                 const t = row.querySelector('.type').value;
@@ -151,7 +161,6 @@
                 const startTime = row.querySelector('.start').value.replace(':', '');
                 const dur = parseFloat(row.querySelector('.duration').value);
 
-                // Calculate End Time
                 const startHour = parseInt(row.querySelector('.start').value.split(':')[0]);
                 const startMin = parseInt(row.querySelector('.start').value.split(':')[1]);
                 
@@ -159,25 +168,27 @@
                 let endMin = startMin + (dur % 1 * 60);
                 if (endMin >= 60) { endHour++; endMin -= 60; }
                 const endTime = `${endHour.toString().padStart(2, '0')}${endMin.toString().padStart(2, '0')}`;
-
-                ics += `
-                    BEGIN:VEVENT
-                    SUMMARY:${f} ${c} ${t}
-                    LOCATION:${b} ${r}
-                    DESCRIPTION:Section ${s}
-                    DTSTART;TZID=America/Toronto:202601${START_DATES[day]}T${startTime}00
-                    DTEND;TZID=America/Toronto:202601${START_DATES[day]}T${endTime}00
-                    RRULE:FREQ=WEEKLY;BYDAY=${DAY_MAP[day]};UNTIL=${UNTIL}
-                    END:VEVENT`;
+                
+                // Add each event - NO INDENTATION ALLOWED
+                ics += `\r\nBEGIN:VEVENT`;
+                ics += `\r\nUID:${stamp}-${index}@western-u-scheduler`;
+                ics += `\r\nDTSTAMP:${stamp}`;
+                ics += `\r\nSUMMARY:${f} ${c} ${t}`;
+                ics += `\r\nLOCATION:${b} ${r}`;
+                ics += `\r\nDESCRIPTION:Section ${s}`;
+                ics += `\r\nDTSTART;TZID=America/Toronto:202601${START_DATES[day]}T${startTime}00`;
+                ics += `\r\nDTEND;TZID=America/Toronto:202601${START_DATES[day]}T${endTime}00`;
+                ics += `\r\nRRULE:FREQ=WEEKLY;BYDAY=${DAY_MAP[day]};UNTIL=${UNTIL}`;
+                ics += `\r\nEND:VEVENT`;
             });
 
-            ics += "\nEND:VCALENDAR";
+            ics += "\r\nEND:VCALENDAR";
             
             const blob = new Blob([ics], { type: 'text/calendar' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Western_Schedule_${new Date().toISOString().slice(0,10)}.ics`;
+            a.download = `Western_Schedule.ics`;
             a.click();
         }
 
