@@ -92,7 +92,7 @@
             
             div.innerHTML = `
                 <div class="row-controls"><button class="delete-btn" onclick="removeRow(this)">Delete</button></div>
-                <div><label>Faculty</label><select class="faculty"><option>ECE</option><option>MSE</option><option>AISE</option><option>BUSINESS</option><option>BME</option></select></div>
+                <div><label>Faculty</label><input type="text" class="faculty" placeholder="ECE"></div>
                 <div><label>Class Code</label><input type="text" class="code" placeholder="3300"></div>
                 <div><label>Type</label><select class="type"><option>Lecture</option><option>Lab</option><option>Tutorial</option></select></div>
                 <div><label>Section</label><input type="text" class="section" placeholder="001"></div>
@@ -196,4 +196,5 @@
         window.onload = loadFromLocal;
     </script>
 </body>
+
 </html>
