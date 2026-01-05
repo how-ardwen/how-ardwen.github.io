@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Western Schedule Generator</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; background: #f4f4f9; }
+        .class-row { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .full-width { grid-column: span 4; }
+        button { padding: 10px 20px; cursor: pointer; border-radius: 5px; border: none; font-weight: bold; }
+        .add-btn { background: #4CAF50; color: white; }
+        .gen-btn { background: #007bff; color: white; float: right; }
+    </style>
+</head>
+<body>
+    <h2>Western University Class Schedule Generator</h2>
+    <div id="container"></div>
+    <br>
+    <button class="add-btn" onclick="addRow()">+ Add Class</button>
+    <button class="gen-btn" onclick="generateICS()">Generate .ics File</button>
+
+    <script>
+        const LAST_DAY = "20260409T235959Z"; // April 9th, 2026
+        const DAY_MAP = { "Monday":"MO", "Tuesday":"TU", "Wednesday":"WE", "Thursday":"TH", "Friday":"FR" };
+
+        function addRow() {
+            const div = document.createElement('div');
+            div.className = 'class-row';
+            div.innerHTML = `
+                <select class="faculty"><option>ECE</option><option>MSE</option><option>AISE</option><option>BUSINESS</option></select>
+                <input type="text" class="code" placeholder="Class Code (e.g. 1330)">
+                <select class="type"><option>Lecture</option><option>Lab</option><option>Tutorial</option></select>
+                <input type="text" class="section" placeholder="Section #">
+                <input type="text" class="bld" placeholder="Building (e.g. SEB)">
+                <input type="text" class="room" placeholder="Room #">
+                <select class="day"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select>
+                <input type="text" class="start" placeholder="Start (e.g. 10:30 AM)">
+                <input type="number" class="duration" placeholder="Duration (hrs)" step="0.5">
+            `;
+            document.getElementById('container').appendChild(div);
+        }
+
+        function generateICS() {
+            let ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Western//Mechatronics//EN"].join("\n");
+            const rows = document.querySelectorAll('.class-row');
+            
+            rows.forEach(row => {
+                const fac = row.querySelector('.faculty').value;
+                const code = row.querySelector('.code').value;
+                const type = row.querySelector('.type').value;
+                const startStr = row.querySelector('.start').value;
+                const duration = parseFloat(row.querySelector('.duration').value);
+                const day = row.querySelector('.day').value;
+
+                // Simple date logic for Jan 2026 start
+                const baseDays = { "Monday":5, "Tuesday":6, "Wednesday":7, "Thursday":8, "Friday":9 };
+                const dayNum = baseDays[day];
+                
+                // Parse Time (e.g., "10:30 AM")
+                const [time, modifier] = startStr.split(' ');
+                let [hours, minutes] = time.split(':');
+                if (modifier === 'PM' && hours !== '12') hours = parseInt(hours) + 12;
+                if (modifier === 'AM' && hours === '12') hours = '00';
+                const formattedTime = `${hours.toString().padStart(2, '0')}${minutes}00`;
+
+                ics += `\nBEGIN:VEVENT\nSUMMARY:${fac} ${code} ${type}\nLOCATION:${row.querySelector('.bld').value} ${row.querySelector('.room').value}\nDESCRIPTION:Section ${row.querySelector('.section').value}\nDTSTART;TZID=America/Toronto:2026010${dayNum}T${formattedTime}\nRRULE:FREQ=WEEKLY;BYDAY=${DAY_MAP[day]};UNTIL=${LAST_DAY}\nEND:VEVENT`;
+            });
+
+            ics += "\nEND:VCALENDAR";
+            const blob = new Blob([ics], { type: 'text/calendar' });
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = "Western_Schedule.ics";
+            link.click();
+        }
+
+        addRow(); // Start with one row
+    </script>
+</body>
+</html>
